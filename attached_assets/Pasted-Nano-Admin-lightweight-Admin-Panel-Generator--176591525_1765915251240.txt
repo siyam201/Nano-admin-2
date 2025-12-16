@@ -1,0 +1,336 @@
+Nano Admin হবে এমন একটা lightweight Admin Panel Generator
+যেটা তুমি যেকোনো ওয়েব অ্যাপের “কন্ট্রোল সেন্টার” হিসেবে বসাতে পারো।
+---
+
+Nano Admin — Core Vision
+
+কম কোডে
+বেশি কন্ট্রোল
+পুনঃব্যবহারযোগ্য
+সিকিউর বাই ডিফল্ট
+
+
+---
+
+Phase 1: Nano Core (সবচেয়ে জরুরি)
+
+এই অংশ শেষ হলেই প্রোজেক্ট usable।
+
+Auth System
+
+Email + Password Login
+
+JWT Access + Refresh
+
+Password Hash (bcrypt)
+
+
+Role & Permission
+
+Admin
+
+User
+
+(ভবিষ্যতে Custom Role)
+
+
+Dashboard
+
+Total Users
+
+Recent Activity
+
+Simple stats
+
+
+CRUD Engine
+
+Generic Table View
+
+Add / Edit / Delete
+
+Search + Pagination
+
+
+এই লেভেলে Nano Admin নিজের কাজ নিজেই করতে পারবে।
+
+
+---
+
+Phase 2: Power Layer
+
+এখানে Nano “শক্তিশালী” হয়।
+
+Role-based Permission (Read / Write / Delete)
+
+Audit Log (কে কখন কী করলো)
+
+Soft Delete
+
+File Upload (image/docs)
+
+Email Notification (user created, reset)
+
+
+এখানে গেলে এটা আর টয় প্রোজেক্ট থাকে না।
+
+
+---
+
+Phase 3: Generator Mode (Future)
+
+এটাই Nano Admin কে আলাদা করবে।
+
+New Project Create Wizard
+
+Auto DB Model Detect
+
+Auto CRUD UI Generate
+
+Config file দিয়ে সব নিয়ন্ত্রণ
+
+
+মানে:
+“ডেটাবেস দাও → অ্যাডমিন রেডি”
+
+
+---
+
+Recommended Stack (Real World Ready)
+
+Frontend: React + TypeScript
+
+Backend: Node.js + Express
+
+DB: PostgreSQL (বা MongoDB)
+
+ORM: Drizzle / Prisma
+
+Auth: JWT
+
+UI: Tailwind CSS
+
+
+এই স্ট্যাক শেখা মানে তুমি future-proof।
+
+
+---
+
+Folder Thinking (খুব গুরুত্বপূর্ণ)
+
+Nano Admin কে ভাবো framework হিসেবে, শুধু অ্যাপ না।
+
+core (auth, permission, crud engine)
+
+ui (dashboard, table, forms)
+
+config (roles, models)
+
+plugins (email, upload, log)
+
+
+
+
+সুন্দর  হলে কাজ করা চাই
+
+READMeও —এই web /app কিভাবে কাজকরে আর অন্য web  /app য়ের সব control এই Admin page / সাইডেই থাকবে এখানে লিস্ট ও থাকবে। 
+
+১) Auth & Access Control
+
+API দিয়ে করা যাবে:
+
+Login / Logout
+
+Token refresh
+
+Password change / reset
+
+Session verify
+
+
+এর মানে:
+
+Web
+
+Mobile app
+
+অন্য সার্ভিস
+সবাই একই Nano Admin ব্যবহার করতে পারবে।
+
+
+একবার বানাও → সবখানে লাগাও।
+
+
+---
+
+২) User Management
+
+API দিয়ে:
+
+User create
+
+User update
+
+User block / active
+
+User delete (soft delete)
+
+User list + search
+
+
+বাস্তবে এটা লাগে:
+
+ই-কমার্স
+
+স্কুল সিস্টেম
+
+যেকোনো SaaS
+
+
+এই API ছাড়া কোনো বড় অ্যাপ নেই।
+
+
+---
+
+৩) Role & Permission System
+
+API দিয়ে:
+
+Role create
+
+Role assign
+
+Permission check
+
+Feature lock/unlock
+
+
+মানে: Admin যা পারবে
+User তা পারবে না
+Moderator মাঝামাঝি
+
+এই জিনিসটাই Nano Admin-কে “professional” বানায়।
+
+
+---
+
+৪) Generic CRUD Engine (সবচেয়ে দামি অংশ)
+
+API দিয়ে:
+
+যেকোনো টেবিল/কলেকশনের ডেটা
+
+Create
+
+Read
+
+Update
+
+Delete
+
+
+
+একটা API দিয়েই:
+
+Products
+
+Orders
+
+Posts
+
+Messages
+
+
+সবকিছু চালানো যাবে।
+
+এটাই Generator হওয়ার রাস্তা।
+
+
+---
+
+৫) Activity & Audit Log
+
+API দিয়ে:
+
+কে কখন কী করলো
+
+কোন ডেটা বদলালো
+
+কে ডিলিট করলো
+
+
+এটা লাগে:
+
+Security
+
+Dispute
+
+Tracking
+
+
+অনেক বড় সিস্টেমেও এটা থাকে না—তুমি রাখবে।
+
+
+---
+
+৬) File & Media Management
+
+API দিয়ে:
+
+Image upload
+
+Document upload
+
+File delete
+
+URL generate
+
+
+মানে: Profile photo
+Product image
+PDF report
+
+সব Nano Admin দিয়েই।
+
+
+---
+
+৭) Notification & Email
+
+API দিয়ে:
+
+User create হলে email
+
+Password reset mail
+
+Admin alert
+
+
+এটা future-proof জিনিস।
+
+
+---
+
+৮) External App Control
+
+সবচেয়ে গুরুত্বপূর্ণ কথা এখন:
+
+API থাকলে:
+
+অন্য ওয়েবসাইট
+
+মোবাইল অ্যাপ
+
+Bot
+
+Automation Script
+
+
+সব Nano Admin কন্ট্রোল করতে পারবে।
+
+মানে Nano Admin নিজে একটা Service।
+মানে Nano Admin নিজে একটা Service।
+DATABASE_URLpostgresql://neondb_owner:npg_3FBJXMhZ4yea@ep-summer-dawn-a4fqry4y-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+and not use any replit auth
+Sinup whit veryfi code and code sent whit gmail app password and admin approved this account
