@@ -1,13 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, type TokenPayload } from "./auth";
 import { storage } from "./storage";
-import type { User } from "@shared/schema";
+import type { User, ApiKey } from "@shared/schema";
 
 declare global {
   namespace Express {
     interface Request {
       user?: User;
       tokenPayload?: TokenPayload;
+      apiKey?: ApiKey;
     }
   }
 }
@@ -73,4 +74,28 @@ export function getClientIp(req: Request): string {
     return forwarded.split(",")[0].trim();
   }
   return req.socket.remoteAddress || "unknown";
+}
+
+export async function apiKeyMiddleware(req: Request, res: Response, next: NextFunction) {
+  const apiKeyHeader = req.headers["x-api-key"] as string;
+  
+  if (!apiKeyHeader) {
+    return res.status(401).json({ message: "API key required. Provide X-API-Key header." });
+  }
+
+  const apiKey = await storage.getApiKeyByKey(apiKeyHeader);
+  if (!apiKey || !apiKey.isActive) {
+    return res.status(401).json({ message: "Invalid or disabled API key" });
+  }
+
+  await storage.updateApiKey(apiKey.id, { lastUsedAt: new Date() });
+
+  const user = await storage.getUser(apiKey.userId);
+  if (!user || user.status !== "active") {
+    return res.status(401).json({ message: "API key owner not found or inactive" });
+  }
+
+  req.apiKey = apiKey;
+  req.user = user;
+  next();
 }

@@ -11,7 +11,7 @@ import {
   generateApiKey,
   getVerificationCodeExpiry,
 } from "./auth";
-import { authMiddleware, adminOnly, getClientIp } from "./middleware";
+import { authMiddleware, adminOnly, getClientIp, apiKeyMiddleware } from "./middleware";
 import { sendVerificationEmail, sendApprovalEmail } from "./email";
 import { registerSchema, loginSchema, verifyCodeSchema, changePasswordSchema, createApiKeySchema } from "@shared/schema";
 
@@ -587,6 +587,196 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Delete API key error:", error);
       res.status(500).json({ message: "Failed to delete API key" });
+    }
+  });
+
+  // =========================================
+  // External API Routes (API Key authenticated)
+  // =========================================
+
+  // External registration - auto-approves after email verification
+  app.post("/api/external/register", apiKeyMiddleware, async (req, res) => {
+    try {
+      const parsed = registerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+
+      const { email, password, name } = parsed.data;
+      const apiKey = req.apiKey!;
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      // Hash password and create user (pending status until verified)
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({
+        email,
+        password: hashedPassword,
+        name,
+        role: "user",
+        status: "pending",
+      });
+
+      // Generate and send verification code with API key info
+      const code = generateVerificationCode();
+      await storage.createVerificationCode({
+        email,
+        code,
+        expiresAt: getVerificationCodeExpiry(),
+        apiKeyId: apiKey.id,
+        apiKeyName: apiKey.name,
+        autoApprove: true,
+      });
+
+      const emailSent = await sendVerificationEmail(email, code, apiKey.name);
+      if (!emailSent) {
+        console.warn("Failed to send verification email");
+      }
+
+      // Log activity
+      await storage.createActivity({
+        userId: user.id,
+        action: "User registered via API",
+        details: `App: ${apiKey.name}`,
+        ipAddress: getClientIp(req),
+      });
+
+      res.json({
+        message: "Verification code sent to your email",
+        appName: apiKey.name,
+      });
+    } catch (error) {
+      console.error("External registration error:", error);
+      res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  // External verification - auto-approves user
+  app.post("/api/external/verify", apiKeyMiddleware, async (req, res) => {
+    try {
+      const parsed = verifyCodeSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+
+      const { email, code } = parsed.data;
+
+      const verificationCode = await storage.getVerificationCode(email, code);
+      if (!verificationCode) {
+        return res.status(400).json({ message: "Invalid verification code" });
+      }
+
+      if (new Date() > verificationCode.expiresAt) {
+        return res.status(400).json({ message: "Verification code expired" });
+      }
+
+      // Mark code as used
+      await storage.markVerificationCodeUsed(verificationCode.id);
+
+      // Get user and auto-approve if registered via API
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(400).json({ message: "User not found" });
+      }
+
+      // Auto-approve user since this is API-based verification
+      await storage.updateUser(user.id, { status: "active" });
+
+      // Log activity
+      await storage.createActivity({
+        userId: user.id,
+        action: "Email verified and auto-approved",
+        details: `App: ${req.apiKey!.name}`,
+        ipAddress: getClientIp(req),
+      });
+
+      // Generate tokens for immediate login
+      const accessToken = generateAccessToken(user);
+      const refreshToken = generateRefreshToken();
+
+      await storage.createRefreshToken({
+        userId: user.id,
+        token: refreshToken,
+        expiresAt: getRefreshTokenExpiry(),
+      });
+
+      await storage.updateUser(user.id, { lastLoginAt: new Date() });
+
+      const { password: _, ...userWithoutPassword } = user;
+
+      res.json({
+        message: "Email verified and account approved",
+        accessToken,
+        refreshToken,
+        user: { ...userWithoutPassword, status: "active" },
+      });
+    } catch (error) {
+      console.error("External verification error:", error);
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  // External login
+  app.post("/api/external/login", apiKeyMiddleware, async (req, res) => {
+    try {
+      const parsed = loginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+
+      const { email, password } = parsed.data;
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      const isPasswordValid = await comparePassword(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      if (user.status === "pending") {
+        return res.status(403).json({ message: "Please verify your email first" });
+      }
+
+      if (user.status === "blocked") {
+        return res.status(403).json({ message: "Account has been blocked" });
+      }
+
+      // Generate tokens
+      const accessToken = generateAccessToken(user);
+      const refreshToken = generateRefreshToken();
+
+      await storage.createRefreshToken({
+        userId: user.id,
+        token: refreshToken,
+        expiresAt: getRefreshTokenExpiry(),
+      });
+
+      await storage.updateUser(user.id, { lastLoginAt: new Date() });
+
+      await storage.createActivity({
+        userId: user.id,
+        action: "User logged in via API",
+        details: `App: ${req.apiKey!.name}`,
+        ipAddress: getClientIp(req),
+      });
+
+      const { password: _, ...userWithoutPassword } = user;
+
+      res.json({
+        accessToken,
+        refreshToken,
+        user: userWithoutPassword,
+      });
+    } catch (error) {
+      console.error("External login error:", error);
+      res.status(500).json({ message: "Login failed" });
     }
   });
 

@@ -31,6 +31,9 @@ export const verificationCodes = pgTable("verification_codes", {
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  apiKeyId: varchar("api_key_id", { length: 36 }),
+  apiKeyName: text("api_key_name"),
+  autoApprove: boolean("auto_approve").notNull().default(false),
 });
 
 // Refresh tokens for JWT

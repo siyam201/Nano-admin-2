@@ -1,4 +1,4 @@
-import { Book, Key, Shield, Users, Activity, BarChart3, Copy, Check } from "lucide-react";
+import { Book, Key, Shield, Users, Activity, BarChart3, Copy, Check, Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -398,6 +398,65 @@ const apiKeyEndpoints: EndpointProps[] = [
   },
 ];
 
+const externalEndpoints: EndpointProps[] = [
+  {
+    method: "POST",
+    path: "/api/external/register",
+    description: "Register a new user via API. User will be auto-approved after email verification (no admin approval needed). Email includes API key name as app name.",
+    auth: true,
+    requestBody: [
+      { field: "email", type: "string", required: true, description: "User email address" },
+      { field: "password", type: "string", required: true, description: "Password (min 6 chars)" },
+      { field: "name", type: "string", required: true, description: "Full name" },
+    ],
+    responseExample: `{
+  "message": "Verification code sent to your email",
+  "appName": "My App Name"
+}`,
+  },
+  {
+    method: "POST",
+    path: "/api/external/verify",
+    description: "Verify email and auto-approve user. Returns tokens for immediate login.",
+    auth: true,
+    requestBody: [
+      { field: "email", type: "string", required: true, description: "User email address" },
+      { field: "code", type: "string", required: true, description: "6-digit verification code" },
+    ],
+    responseExample: `{
+  "message": "Email verified and account approved",
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "refresh_token_here",
+  "user": {
+    "id": "uuid-here",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "status": "active"
+  }
+}`,
+  },
+  {
+    method: "POST",
+    path: "/api/external/login",
+    description: "Login user via API. Returns access and refresh tokens.",
+    auth: true,
+    requestBody: [
+      { field: "email", type: "string", required: true, description: "User email address" },
+      { field: "password", type: "string", required: true, description: "User password" },
+    ],
+    responseExample: `{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "refresh_token_here",
+  "user": {
+    "id": "uuid-here",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "status": "active"
+  }
+}`,
+  },
+];
+
 export default function ApiDocsPage() {
   return (
     <DashboardLayout>
@@ -464,6 +523,10 @@ export default function ApiDocsPage() {
               <Key className="h-4 w-4" />
               API Keys
             </TabsTrigger>
+            <TabsTrigger value="external" className="flex items-center gap-1" data-testid="tab-external">
+              <Globe className="h-4 w-4" />
+              External API
+            </TabsTrigger>
           </TabsList>
 
           <ScrollArea className="h-[600px] mt-4">
@@ -507,6 +570,26 @@ export default function ApiDocsPage() {
               <div className="space-y-2">
                 <h2 className="text-lg font-semibold mb-4">API Key Endpoints</h2>
                 {apiKeyEndpoints.map((endpoint, index) => (
+                  <EndpointCard key={index} endpoint={endpoint} />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="external" className="mt-0">
+              <div className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-md">
+                  <h3 className="font-medium mb-2">External API Authentication</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    External API endpoints use API Key authentication. Include your API key in the X-API-Key header:
+                  </p>
+                  <CodeBlock code={`X-API-Key: nano_xxxxxxxxxxxxxxxx`} />
+                  <p className="text-sm text-muted-foreground mt-3">
+                    <strong>Benefits:</strong> Users registered via external API are auto-approved after email verification (no admin approval needed). 
+                    The verification email will show your API key name as the app name.
+                  </p>
+                </div>
+                <h2 className="text-lg font-semibold mb-4">External API Endpoints</h2>
+                {externalEndpoints.map((endpoint, index) => (
                   <EndpointCard key={index} endpoint={endpoint} />
                 ))}
               </div>
