@@ -13,6 +13,7 @@ import DashboardPage from "@/pages/dashboard";
 import UsersPage from "@/pages/users";
 import ActivitiesPage from "@/pages/activities";
 import ApiKeysPage from "@/pages/api-keys";
+import ApiDocsPage from "@/pages/api-docs";
 import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -72,6 +73,9 @@ function Router() {
       </Route>
       <Route path="/api-keys">
         <ProtectedRoute component={ApiKeysPage} />
+      </Route>
+      <Route path="/api-docs">
+        <ProtectedRoute component={ApiDocsPage} />
       </Route>
       <Route path="/settings">
         <ProtectedRoute component={SettingsPage} />

@@ -7,6 +7,7 @@ import {
   LogOut,
   Shield,
   Settings,
+  Book,
 } from "lucide-react";
 import {
   Sidebar,
@@ -49,6 +50,11 @@ const mainNavItems = [
 ];
 
 const settingsNavItems = [
+  {
+    title: "API Docs",
+    url: "/api-docs",
+    icon: Book,
+  },
   {
     title: "Settings",
     url: "/settings",
