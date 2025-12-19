@@ -326,6 +326,171 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(apiKeys).where(eq(apiKeys.id, id));
     return true;
   }
+
+  // Projects
+  async createProject(project: InsertProject): Promise<Project> {
+    const [result] = await db.insert(projects).values(project).returning();
+    return result;
+  }
+
+  async getProject(id: string): Promise<Project | undefined> {
+    const [result] = await db.select().from(projects).where(eq(projects.id, id));
+    return result || undefined;
+  }
+
+  async getProjects(ownerId: string): Promise<Project[]> {
+    return db.select().from(projects).where(eq(projects.ownerId, ownerId)).orderBy(desc(projects.createdAt));
+  }
+
+  async updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined> {
+    const [result] = await db.update(projects).set({ ...updates, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+    return result || undefined;
+  }
+
+  async deleteProject(id: string): Promise<boolean> {
+    const result = await db.delete(projects).where(eq(projects.id, id));
+    return !!result;
+  }
+
+  // Project Users
+  async addUserToProject(projectUser: InsertProjectUser): Promise<ProjectUser> {
+    const [result] = await db.insert(projectUsers).values(projectUser).returning();
+    return result;
+  }
+
+  async getProjectUsers(projectId: string): Promise<ProjectUser[]> {
+    return db.select().from(projectUsers).where(eq(projectUsers.projectId, projectId));
+  }
+
+  async removeUserFromProject(projectId: string, userId: string): Promise<boolean> {
+    const result = await db.delete(projectUsers).where(and(eq(projectUsers.projectId, projectId), eq(projectUsers.userId, userId)));
+    return !!result;
+  }
+
+  // Databases
+  async createDatabase(database: InsertDatabase): Promise<Database> {
+    const [result] = await db.insert(databases).values(database).returning();
+    return result;
+  }
+
+  async getDatabase(id: string): Promise<Database | undefined> {
+    const [result] = await db.select().from(databases).where(eq(databases.id, id));
+    return result || undefined;
+  }
+
+  async getDatabasesByProject(projectId: string): Promise<Database[]> {
+    return db.select().from(databases).where(eq(databases.projectId, projectId)).orderBy(desc(databases.createdAt));
+  }
+
+  async updateDatabase(id: string, updates: Partial<Database>): Promise<Database | undefined> {
+    const [result] = await db.update(databases).set({ ...updates, updatedAt: new Date() }).where(eq(databases.id, id)).returning();
+    return result || undefined;
+  }
+
+  async deleteDatabase(id: string): Promise<boolean> {
+    const result = await db.delete(databases).where(eq(databases.id, id));
+    return !!result;
+  }
+
+  // Database Credentials
+  async createDatabaseCredential(credential: InsertDatabaseCredential): Promise<DatabaseCredential> {
+    const [result] = await db.insert(databaseCredentials).values(credential).returning();
+    return result;
+  }
+
+  async getDatabaseCredentials(databaseId: string): Promise<DatabaseCredential[]> {
+    return db.select().from(databaseCredentials).where(eq(databaseCredentials.databaseId, databaseId));
+  }
+
+  async getUserDatabaseCredential(databaseId: string, userId: string): Promise<DatabaseCredential | undefined> {
+    const [result] = await db.select().from(databaseCredentials).where(and(eq(databaseCredentials.databaseId, databaseId), eq(databaseCredentials.userId, userId), eq(databaseCredentials.isActive, true)));
+    return result || undefined;
+  }
+
+  async deleteDatabaseCredential(id: string): Promise<boolean> {
+    const result = await db.delete(databaseCredentials).where(eq(databaseCredentials.id, id));
+    return !!result;
+  }
+
+  // API Vault
+  async createApiVaultEntry(entry: InsertApiVaultEntry): Promise<ApiVaultEntry> {
+    const [result] = await db.insert(apiVault).values(entry).returning();
+    return result;
+  }
+
+  async getApiVaultEntry(id: string): Promise<ApiVaultEntry | undefined> {
+    const [result] = await db.select().from(apiVault).where(eq(apiVault.id, id));
+    return result || undefined;
+  }
+
+  async getProjectApiVault(projectId: string): Promise<ApiVaultEntry[]> {
+    return db.select().from(apiVault).where(eq(apiVault.projectId, projectId)).orderBy(desc(apiVault.createdAt));
+  }
+
+  async updateApiVaultEntry(id: string, updates: Partial<ApiVaultEntry>): Promise<ApiVaultEntry | undefined> {
+    const [result] = await db.update(apiVault).set({ ...updates, updatedAt: new Date() }).where(eq(apiVault.id, id)).returning();
+    return result || undefined;
+  }
+
+  async deleteApiVaultEntry(id: string): Promise<boolean> {
+    const result = await db.delete(apiVault).where(eq(apiVault.id, id));
+    return !!result;
+  }
+
+  // External Signup Keys
+  async createExternalSignupKey(key: InsertExternalSignupKey): Promise<ExternalSignupKey> {
+    const [result] = await db.insert(externalSignupKeys).values(key).returning();
+    return result;
+  }
+
+  async getExternalSignupKey(apiKey: string): Promise<ExternalSignupKey | undefined> {
+    const [result] = await db.select().from(externalSignupKeys).where(eq(externalSignupKeys.apiKey, apiKey));
+    return result || undefined;
+  }
+
+  async getProjectSignupKeys(projectId: string): Promise<ExternalSignupKey[]> {
+    return db.select().from(externalSignupKeys).where(eq(externalSignupKeys.projectId, projectId));
+  }
+
+  async updateExternalSignupKey(id: string, updates: Partial<ExternalSignupKey>): Promise<ExternalSignupKey | undefined> {
+    const [result] = await db.update(externalSignupKeys).set(updates).where(eq(externalSignupKeys.id, id)).returning();
+    return result || undefined;
+  }
+
+  // Email Configs
+  async createEmailConfig(config: InsertEmailConfig): Promise<EmailConfig> {
+    const [result] = await db.insert(emailConfigs).values(config).returning();
+    return result;
+  }
+
+  async getEmailConfig(projectId: string): Promise<EmailConfig | undefined> {
+    const [result] = await db.select().from(emailConfigs).where(eq(emailConfigs.projectId, projectId));
+    return result || undefined;
+  }
+
+  async updateEmailConfig(id: string, updates: Partial<EmailConfig>): Promise<EmailConfig | undefined> {
+    const [result] = await db.update(emailConfigs).set({ ...updates, updatedAt: new Date() }).where(eq(emailConfigs.id, id)).returning();
+    return result || undefined;
+  }
+
+  // Audit Logs
+  async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
+    const [result] = await db.insert(auditLogs).values(log).returning();
+    return result;
+  }
+
+  async getAuditLogs(options: { projectId?: string; limit: number; offset: number }): Promise<AuditLog[]> {
+    const { projectId, limit, offset } = options;
+    let conditions: any[] = [];
+    
+    if (projectId) {
+      conditions.push(eq(auditLogs.projectId, projectId));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    return db.select().from(auditLogs).where(whereClause).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
+  }
 }
 
 export const storage = new DatabaseStorage();
