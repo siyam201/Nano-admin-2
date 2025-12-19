@@ -4,6 +4,14 @@ import {
   refreshTokens,
   activities,
   apiKeys,
+  projects,
+  projectUsers,
+  databases,
+  databaseCredentials,
+  apiVault,
+  externalSignupKeys,
+  emailConfigs,
+  auditLogs,
   type User,
   type InsertUser,
   type VerificationCode,
@@ -14,6 +22,22 @@ import {
   type InsertActivity,
   type ApiKey,
   type InsertApiKey,
+  type Project,
+  type InsertProject,
+  type ProjectUser,
+  type InsertProjectUser,
+  type Database,
+  type InsertDatabase,
+  type DatabaseCredential,
+  type InsertDatabaseCredential,
+  type ApiVaultEntry,
+  type InsertApiVaultEntry,
+  type ExternalSignupKey,
+  type InsertExternalSignupKey,
+  type EmailConfig,
+  type InsertEmailConfig,
+  type AuditLog,
+  type InsertAuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, or, sql, gte, lt } from "drizzle-orm";
@@ -53,6 +77,53 @@ export interface IStorage {
   getApiKeyByKey(key: string): Promise<ApiKey | undefined>;
   updateApiKey(id: string, updates: Partial<ApiKey>): Promise<ApiKey | undefined>;
   deleteApiKey(id: string): Promise<boolean>;
+
+  // Projects
+  createProject(project: InsertProject): Promise<Project>;
+  getProject(id: string): Promise<Project | undefined>;
+  getProjects(ownerId: string): Promise<Project[]>;
+  updateProject(id: string, updates: Partial<Project>): Promise<Project | undefined>;
+  deleteProject(id: string): Promise<boolean>;
+
+  // Project Users
+  addUserToProject(projectUser: InsertProjectUser): Promise<ProjectUser>;
+  getProjectUsers(projectId: string): Promise<ProjectUser[]>;
+  removeUserFromProject(projectId: string, userId: string): Promise<boolean>;
+
+  // Databases
+  createDatabase(database: InsertDatabase): Promise<Database>;
+  getDatabase(id: string): Promise<Database | undefined>;
+  getDatabasesByProject(projectId: string): Promise<Database[]>;
+  updateDatabase(id: string, updates: Partial<Database>): Promise<Database | undefined>;
+  deleteDatabase(id: string): Promise<boolean>;
+
+  // Database Credentials
+  createDatabaseCredential(credential: InsertDatabaseCredential): Promise<DatabaseCredential>;
+  getDatabaseCredentials(databaseId: string): Promise<DatabaseCredential[]>;
+  getUserDatabaseCredential(databaseId: string, userId: string): Promise<DatabaseCredential | undefined>;
+  deleteDatabaseCredential(id: string): Promise<boolean>;
+
+  // API Vault
+  createApiVaultEntry(entry: InsertApiVaultEntry): Promise<ApiVaultEntry>;
+  getApiVaultEntry(id: string): Promise<ApiVaultEntry | undefined>;
+  getProjectApiVault(projectId: string): Promise<ApiVaultEntry[]>;
+  updateApiVaultEntry(id: string, updates: Partial<ApiVaultEntry>): Promise<ApiVaultEntry | undefined>;
+  deleteApiVaultEntry(id: string): Promise<boolean>;
+
+  // External Signup Keys
+  createExternalSignupKey(key: InsertExternalSignupKey): Promise<ExternalSignupKey>;
+  getExternalSignupKey(apiKey: string): Promise<ExternalSignupKey | undefined>;
+  getProjectSignupKeys(projectId: string): Promise<ExternalSignupKey[]>;
+  updateExternalSignupKey(id: string, updates: Partial<ExternalSignupKey>): Promise<ExternalSignupKey | undefined>;
+
+  // Email Configs
+  createEmailConfig(config: InsertEmailConfig): Promise<EmailConfig>;
+  getEmailConfig(projectId: string): Promise<EmailConfig | undefined>;
+  updateEmailConfig(id: string, updates: Partial<EmailConfig>): Promise<EmailConfig | undefined>;
+
+  // Audit Logs
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(options: { projectId?: string; limit: number; offset: number }): Promise<AuditLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
