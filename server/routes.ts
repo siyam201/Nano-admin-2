@@ -19,8 +19,11 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Auth routes
-  app.post("/api/auth/register", async (req, res) => {
+  // Auth routes - Website: Login Only (NO signup on website)
+  // External Signup: Only via API with API key
+
+  // Admin-only: Create user endpoint
+  app.post("/api/admin/users/create", authMiddleware, adminOnly, async (req, res) => {
     try {
       const parsed = registerSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -28,57 +31,104 @@ export async function registerRoutes(
       }
 
       const { email, password, name } = parsed.data;
+      const userCount = await storage.countUsers();
+      const isFirstUser = userCount === 0;
 
-      // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "Email already registered" });
       }
 
-      // Check if this is the first user (make them admin)
-      const userCount = await storage.countUsers();
-      const isFirstUser = userCount === 0;
-
-      // Hash password and create user
       const hashedPassword = await hashPassword(password);
       const user = await storage.createUser({
         email,
         password: hashedPassword,
         name,
         role: isFirstUser ? "admin" : "user",
-        status: isFirstUser ? "active" : "pending", // First user auto-approved
+        status: "active",
       });
 
-      // Generate and send verification code (skip for first user who is auto-approved)
-      if (!isFirstUser) {
-        const code = generateVerificationCode();
-        await storage.createVerificationCode({
-          email,
-          code,
-          expiresAt: getVerificationCodeExpiry(),
-        });
+      await storage.createAuditLog({
+        userId: req.user!.id,
+        action: "create",
+        resource: "user",
+        resourceId: user.id,
+        details: { email, name },
+        ipAddress: getClientIp(req),
+        source: "website",
+      });
 
-        const emailSent = await sendVerificationEmail(email, code);
-        if (!emailSent) {
-          console.warn("Failed to send verification email");
-        }
+      const { password: _, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // External API: Signup endpoint (no website signup)
+  app.post("/api/public/signup", async (req, res) => {
+    try {
+      const apiKey = req.headers["x-api-key"] as string;
+      if (!apiKey) {
+        return res.status(401).json({ message: "API key required" });
       }
 
-      // Log activity
-      await storage.createActivity({
-        userId: user.id,
-        action: "User registered",
-        details: isFirstUser ? "First user - auto-approved as admin" : "Pending email verification",
-        ipAddress: getClientIp(req),
+      const signupKey = await storage.getExternalSignupKey(apiKey);
+      if (!signupKey || !signupKey.isActive) {
+        return res.status(401).json({ message: "Invalid API key" });
+      }
+
+      const parsed = registerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.errors[0].message });
+      }
+
+      const { email, password, name } = parsed.data;
+
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({
+        email,
+        password: hashedPassword,
+        name,
+        role: "user",
+        status: signupKey.autoApproveSignup ? "active" : "pending",
       });
 
-      res.json({
-        message: isFirstUser ? "Account created and approved" : "Verification code sent to your email",
-        isFirstUser,
+      const code = generateVerificationCode();
+      await storage.createVerificationCode({
+        email,
+        code,
+        expiresAt: getVerificationCodeExpiry(),
+        apiKeyId: signupKey.id,
+        apiKeyName: signupKey.name,
+        autoApprove: signupKey.autoApproveSignup,
       });
+
+      await sendVerificationEmail(email, code);
+
+      await storage.updateExternalSignupKey(signupKey.id, { lastUsedAt: new Date() });
+
+      await storage.createAuditLog({
+        userId: user.id,
+        projectId: signupKey.projectId,
+        action: "create",
+        resource: "user",
+        resourceId: user.id,
+        details: { source: signupKey.name },
+        ipAddress: getClientIp(req),
+        source: "api",
+      });
+
+      res.status(201).json({ message: "Verification code sent to email" });
     } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
+      console.error("External signup error:", error);
+      res.status(500).json({ message: "Signup failed" });
     }
   });
 

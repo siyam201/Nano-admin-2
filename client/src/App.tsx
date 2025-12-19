@@ -60,7 +60,7 @@ function Router() {
         <PublicRoute component={LoginPage} />
       </Route>
       <Route path="/register">
-        <PublicRoute component={RegisterPage} />
+        <Redirect to="/login" />
       </Route>
       <Route path="/">
         <ProtectedRoute component={DashboardPage} />

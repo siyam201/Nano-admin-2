@@ -62,7 +62,7 @@ export default function LoginPage() {
           <div>
             <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
             <CardDescription className="mt-2">
-              Sign in to your Nano Admin account
+              Admin Portal - Login Only (Website signup via API only)
             </CardDescription>
           </div>
         </CardHeader>
@@ -125,10 +125,7 @@ export default function LoginPage() {
             </form>
           </Form>
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link href="/register" className="text-primary hover:underline" data-testid="link-register">
-              Sign up
-            </Link>
+            New users register via External API only
           </div>
         </CardContent>
       </Card>
