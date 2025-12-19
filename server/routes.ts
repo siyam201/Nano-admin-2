@@ -830,5 +830,229 @@ export async function registerRoutes(
     }
   });
 
+  // Projects routes
+  app.get("/api/admin/projects", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const projects = await storage.getProjects(req.user!.id);
+      res.json(projects);
+    } catch (error) {
+      console.error("Get projects error:", error);
+      res.status(500).json({ message: "Failed to fetch projects" });
+    }
+  });
+
+  app.post("/api/admin/projects", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      const project = await storage.createProject({
+        name,
+        description,
+        ownerId: req.user!.id,
+        status: "active",
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.id,
+        action: "create",
+        resource: "project",
+        resourceId: project.id,
+        details: { name },
+        ipAddress: getClientIp(req),
+        source: "website",
+      });
+
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Create project error:", error);
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
+  app.get("/api/admin/projects/:projectId", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const project = await storage.getProject(req.params.projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error("Get project error:", error);
+      res.status(500).json({ message: "Failed to fetch project" });
+    }
+  });
+
+  app.patch("/api/admin/projects/:projectId", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const { name, description, status } = req.body;
+      const project = await storage.updateProject(req.params.projectId, { name, description, status });
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      await storage.createAuditLog({
+        userId: req.user!.id,
+        projectId: project.id,
+        action: "update",
+        resource: "project",
+        resourceId: project.id,
+        details: { name, description, status },
+        ipAddress: getClientIp(req),
+        source: "website",
+      });
+
+      res.json(project);
+    } catch (error) {
+      console.error("Update project error:", error);
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  // Databases routes
+  app.get("/api/admin/projects/:projectId/databases", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const databases = await storage.getDatabasesByProject(req.params.projectId);
+      res.json(databases);
+    } catch (error) {
+      console.error("Get databases error:", error);
+      res.status(500).json({ message: "Failed to fetch databases" });
+    }
+  });
+
+  app.post("/api/admin/projects/:projectId/databases", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const { name, type, host, port, username, password, databaseName, isolationType } = req.body;
+      const database = await storage.createDatabase({
+        name,
+        projectId: req.params.projectId,
+        type,
+        host,
+        port,
+        username,
+        password,
+        databaseName,
+        isolationType: isolationType || "dedicated",
+        status: "active",
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.id,
+        projectId: req.params.projectId,
+        action: "create",
+        resource: "database",
+        resourceId: database.id,
+        details: { name, type },
+        ipAddress: getClientIp(req),
+        source: "website",
+      });
+
+      const { password: _, ...safeDb } = database;
+      res.status(201).json(safeDb);
+    } catch (error) {
+      console.error("Create database error:", error);
+      res.status(500).json({ message: "Failed to create database" });
+    }
+  });
+
+  // API Vault routes
+  app.get("/api/admin/projects/:projectId/vault", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const vault = await storage.getProjectApiVault(req.params.projectId);
+      res.json(vault.map(v => ({ ...v, encryptedValue: "***" })));
+    } catch (error) {
+      console.error("Get vault error:", error);
+      res.status(500).json({ message: "Failed to fetch vault" });
+    }
+  });
+
+  app.post("/api/admin/projects/:projectId/vault", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const { serviceName, keyName, encryptedValue, scope, rateLimit } = req.body;
+      const entry = await storage.createApiVaultEntry({
+        projectId: req.params.projectId,
+        serviceName,
+        keyName,
+        encryptedValue,
+        scope: scope || "private",
+        rateLimit: rateLimit || 1000,
+        status: "active",
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.id,
+        projectId: req.params.projectId,
+        action: "create",
+        resource: "api_vault",
+        resourceId: entry.id,
+        details: { serviceName, keyName },
+        ipAddress: getClientIp(req),
+        source: "website",
+      });
+
+      res.status(201).json({ ...entry, encryptedValue: "***" });
+    } catch (error) {
+      console.error("Create vault entry error:", error);
+      res.status(500).json({ message: "Failed to create vault entry" });
+    }
+  });
+
+  // External Signup Keys routes
+  app.get("/api/admin/projects/:projectId/signup-keys", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const keys = await storage.getProjectSignupKeys(req.params.projectId);
+      res.json(keys);
+    } catch (error) {
+      console.error("Get signup keys error:", error);
+      res.status(500).json({ message: "Failed to fetch signup keys" });
+    }
+  });
+
+  app.post("/api/admin/projects/:projectId/signup-keys", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const { name, rateLimit, autoApproveSignup } = req.body;
+      const apiKey = `sk_${require("crypto").randomBytes(32).toString("hex")}`;
+      
+      const key = await storage.createExternalSignupKey({
+        projectId: req.params.projectId,
+        apiKey,
+        name,
+        rateLimit: rateLimit || 100,
+        autoApproveSignup: autoApproveSignup || false,
+        isActive: true,
+      });
+
+      await storage.createAuditLog({
+        userId: req.user!.id,
+        projectId: req.params.projectId,
+        action: "create",
+        resource: "signup_key",
+        resourceId: key.id,
+        details: { name },
+        ipAddress: getClientIp(req),
+        source: "website",
+      });
+
+      res.status(201).json(key);
+    } catch (error) {
+      console.error("Create signup key error:", error);
+      res.status(500).json({ message: "Failed to create signup key" });
+    }
+  });
+
+  // Audit Logs routes
+  app.get("/api/admin/audit-logs", authMiddleware, adminOnly, async (req, res) => {
+    try {
+      const { projectId, limit = 50, offset = 0 } = req.query;
+      const logs = await storage.getAuditLogs({
+        projectId: projectId as string,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string),
+      });
+      res.json(logs);
+    } catch (error) {
+      console.error("Get audit logs error:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
   return httpServer;
 }

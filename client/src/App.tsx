@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import DashboardPage from "@/pages/dashboard";
+import ProjectsPage from "@/pages/projects";
 import UsersPage from "@/pages/users";
 import ActivitiesPage from "@/pages/activities";
 import ApiKeysPage from "@/pages/api-keys";
@@ -64,6 +65,9 @@ function Router() {
       </Route>
       <Route path="/">
         <ProtectedRoute component={DashboardPage} />
+      </Route>
+      <Route path="/projects">
+        <ProtectedRoute component={ProjectsPage} />
       </Route>
       <Route path="/users">
         <ProtectedRoute component={UsersPage} />
